@@ -73,6 +73,14 @@ func main() {
 		},
 		P: metadata.PlainMetadata{Authors: "EPUB test author"},
 	}
+	pdfMetadata := metadata.Metadata{
+		CBI: metadata.ComicBookMetadata{
+			AppID:             "comicfile-testdata",
+			ComicBookInfoData: metadata.ComicBookInfo{Title: "PDF test chapter images"},
+		},
+		CI: metadata.ComicInfoMetadata{Title: "PDF test chapter"},
+		P:  metadata.PlainMetadata{Authors: "PDF test author"},
+	}
 
 	cases := []containerCase{
 		{name: "dir-container-empty", format: comicfile.DIR_EXT},
@@ -122,6 +130,19 @@ func main() {
 		testCase.metadata = epubMetadata
 		cases = append(cases, testCase)
 	}
+	cases = append(cases,
+		containerCase{
+			name:     "pdf-container-empty",
+			format:   comicfile.PDF_EXT,
+			metadata: pdfMetadata,
+		},
+		containerCase{
+			name:     "pdf-container-two-valid-png-pages",
+			format:   comicfile.PDF_EXT,
+			fixtures: []fixture{pngFixture, pngFixture},
+			metadata: pdfMetadata,
+		},
+	)
 
 	for _, testCase := range cases {
 		container, err := comicfile.NewContainer(testCase.format)
