@@ -77,7 +77,7 @@ type ContainerReader interface {
 
 // OpenContainer opens a readable comic chapter container.
 //
-// Directory, CBZ, and EPUB containers are supported.
+// Directory, CBZ, EPUB, and PDF containers are supported.
 func OpenContainer(path string) (ContainerReader, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -92,6 +92,9 @@ func OpenContainer(path string) (ContainerReader, error) {
 	}
 	if strings.EqualFold(filepath.Ext(path), "."+EPUB_EXT) {
 		return epub.Open(path)
+	}
+	if strings.EqualFold(filepath.Ext(path), "."+PDF_EXT) {
+		return pdf.Open(path)
 	}
 
 	return nil, container.ErrExtensionNotSupported
