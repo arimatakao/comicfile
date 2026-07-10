@@ -36,7 +36,7 @@ func IsNotSupported(fileFormat string) bool {
 
 // Container describes a writable chapter output that accepts page images and
 // then persists itself to disk.
-type Container interface {
+type ContainerWriter interface {
 	// WriteOnDiskAndClose finalizes container content and writes it into
 	// outputDir using outputFileName as a base name.
 	WriteOnDiskAndClose(outputDir string, outputFileName string, m metadata.Metadata, chapterRange string) error
@@ -47,7 +47,7 @@ type Container interface {
 // NewContainer creates a container by file extension.
 //
 // Supported extensions are CBZ_EXT, PDF_EXT, EPUB_EXT and DIR_EXT.
-func NewContainer(extension string) (Container, error) {
+func NewContainer(extension string) (ContainerWriter, error) {
 
 	switch extension {
 	case CBZ_EXT:
@@ -62,6 +62,18 @@ func NewContainer(extension string) (Container, error) {
 
 	return nil, ErrExtensionNotSupport
 }
+
+// ContainerReader describes a readable comic chapter container.
+type ContainerReader interface {
+	// TotalPages returns the number of pages in the container.
+	TotalPages() int
+	// ErrPages returns the number of pages that could not be read.
+	ErrPages() int
+	// Page returns the image data for the page at index.
+	Page(index int) ([]byte, error)
+}
+
+// func OpenContainer(filepath string) (ContainerReader, err)
 
 // safeOutputPath returns a non-existing output path for a file container.
 // It sanitizes outputFileName and appends a numeric suffix when needed to
