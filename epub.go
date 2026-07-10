@@ -87,7 +87,7 @@ func (e *epubArchive) WriteOnDiskAndClose(outputDir string, outputFileName strin
 	return os.RemoveAll(e.tempDir)
 }
 
-func (e *epubArchive) AddFile(fileExt string, imageBytes []byte) error {
+func (e *epubArchive) AddPage(fileExt string, imageBytes []byte) error {
 	fileName := fmt.Sprintf("%02d.%s", e.pageIndex, fileExt)
 	filePath := filepath.Join(e.tempDir, fileName)
 	err := os.WriteFile(filePath, imageBytes, os.ModePerm)

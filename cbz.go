@@ -81,7 +81,7 @@ func (c *cbzArchive) WriteOnDiskAndClose(outputDir, outputFileName string,
 	return nil
 }
 
-func (c *cbzArchive) AddFile(fileExt string, src []byte) error {
+func (c *cbzArchive) AddPage(fileExt string, src []byte) error {
 	fileName := fmt.Sprintf("%02d.%s", c.pageCounter, fileExt)
 	buf := bytes.NewBuffer(src)
 	w, err := c.writer.Create(fileName)

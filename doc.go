@@ -3,6 +3,6 @@
 //
 // A typical flow is:
 //  1. Create a container with NewContainer.
-//  2. Add pages with Container.AddFile.
+//  2. Add pages with Container.AddPage.
 //  3. Finalize output with Container.WriteOnDiskAndClose.
 package comicfile

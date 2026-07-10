@@ -61,7 +61,7 @@ func (p pdfFile) WriteOnDiskAndClose(outputDir, outputFileName string,
 	return nil
 }
 
-func (p pdfFile) AddFile(fileName string, imageBytes []byte) error {
+func (p pdfFile) AddPage(fileName string, imageBytes []byte) error {
 	imgWidth, imgHeight, err := getImageDimensions(imageBytes)
 	if err != nil {
 		return err

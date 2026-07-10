@@ -40,8 +40,8 @@ type Container interface {
 	// WriteOnDiskAndClose finalizes container content and writes it into
 	// outputDir using outputFileName as a base name.
 	WriteOnDiskAndClose(outputDir string, outputFileName string, m metadata.Metadata, chapterRange string) error
-	// AddFile appends a new page represented by imageBytes with fileExt format.
-	AddFile(fileExt string, imageBytes []byte) error
+	// AddPage appends a new page represented by imageBytes with fileExt format.
+	AddPage(fileExt string, imageBytes []byte) error
 }
 
 // NewContainer creates a container by file extension.
