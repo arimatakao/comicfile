@@ -2,13 +2,17 @@ package comicfile
 
 import (
 	"errors"
-	"fmt"
 	"image"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/arimatakao/comicfile/cbz"
+	"github.com/arimatakao/comicfile/dir"
+	"github.com/arimatakao/comicfile/epub"
+	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
+	"github.com/arimatakao/comicfile/pdf"
 )
 
 const (
@@ -28,7 +32,7 @@ var (
 	ErrExtensionNotSupport = errors.New("extension container is not supported")
 	// ErrPageIndexOutOfRange is returned when a page index is outside the
 	// container's page range.
-	ErrPageIndexOutOfRange = errors.New("page index out of range")
+	ErrPageIndexOutOfRange = container.ErrPageIndexOutOfRange
 )
 
 // IsNotSupported reports whether fileFormat is not one of the supported
@@ -57,13 +61,13 @@ func NewContainer(extension string) (ContainerWriter, error) {
 
 	switch extension {
 	case CBZ_EXT:
-		return newCBZArchive()
+		return cbz.New()
 	case PDF_EXT:
-		return newPdfFile()
+		return pdf.New()
 	case EPUB_EXT:
-		return newEpubArchive()
+		return epub.New()
 	case DIR_EXT:
-		return newDirContainer()
+		return dir.New()
 	}
 
 	return nil, ErrExtensionNotSupport
@@ -91,69 +95,17 @@ func OpenContainer(path string) (ContainerReader, error) {
 	}
 
 	if info.IsDir() {
-		return openDirContainer(path)
+		return dir.Open(path)
 	}
 	if strings.EqualFold(filepath.Ext(path), "."+CBZ_EXT) {
-		return openCBZContainer(path)
+		return cbz.Open(path)
 	}
 
 	return nil, ErrExtensionNotSupport
 }
 
-// safeOutputPath returns a non-existing output path for a file container.
-// It sanitizes outputFileName and appends a numeric suffix when needed to
-// avoid overwriting an existing file.
-func safeOutputPath(outputDir, outputFileName, extension string) string {
-	outputFileName = SafeOutputName(outputFileName)
-
-	outputPath := filepath.Join(outputDir, outputFileName+"."+extension)
-
-	for count := 1; ; count++ {
-		_, err := os.Stat(outputPath)
-		if errors.Is(err, os.ErrNotExist) {
-			break
-		}
-		outputPath = filepath.Join(outputDir,
-			fmt.Sprintf("%s (%d).%s", outputFileName, count, extension))
-	}
-	return outputPath
-}
-
-// safeOutputDirPath returns a non-existing output path for a directory
-// container. It sanitizes outputFileName and appends a numeric suffix when
-// the target directory already exists.
-func safeOutputDirPath(outputDir, outputFileName string) string {
-	outputFileName = SafeOutputName(outputFileName)
-
-	outputPath := filepath.Join(outputDir, outputFileName)
-
-	for count := 1; ; count++ {
-		_, err := os.Stat(outputPath)
-		if errors.Is(err, os.ErrNotExist) {
-			break
-		}
-		outputPath = filepath.Join(outputDir,
-			fmt.Sprintf("%s (%d)", outputFileName, count))
-	}
-	return outputPath
-}
-
 // SafeOutputName replaces path separators and characters that are invalid in
 // common output file systems while preserving a single file or directory name.
 func SafeOutputName(outputFileName string) string {
-	// unix
-	outputFileName = strings.ReplaceAll(outputFileName, "/", "_")
-	outputFileName = strings.ReplaceAll(outputFileName, `\`, "_")
-	// windows
-	outputFileName = strings.ReplaceAll(outputFileName, "<", "_")
-	outputFileName = strings.ReplaceAll(outputFileName, ">", "_")
-	outputFileName = strings.ReplaceAll(outputFileName, ":", "_")
-	outputFileName = strings.ReplaceAll(outputFileName, `"`, "_")
-	outputFileName = strings.ReplaceAll(outputFileName, "?", "_")
-	outputFileName = strings.ReplaceAll(outputFileName, "*", "_")
-	outputFileName = strings.ReplaceAll(outputFileName, "|", "-")
-	if outputFileName == "" || outputFileName == "." || outputFileName == ".." {
-		return "_"
-	}
-	return outputFileName
+	return container.SafeOutputName(outputFileName)
 }

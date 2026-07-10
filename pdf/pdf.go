@@ -1,4 +1,4 @@
-package comicfile
+package pdf
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
 	"github.com/signintech/gopdf"
 )
@@ -14,9 +15,9 @@ type pdfFile struct {
 	pdf *gopdf.GoPdf
 }
 
-// newPdfFile creates a PDF container configured to preserve original image
+// New creates a PDF container configured to preserve original image
 // data and accept pages of arbitrary dimensions.
-func newPdfFile() (pdfFile, error) {
+func New() (pdfFile, error) {
 
 	pdf := new(gopdf.GoPdf)
 	pdf.Start(gopdf.Config{
@@ -50,7 +51,7 @@ func (p pdfFile) WriteOnDiskAndClose(outputDir, outputFileName string,
 		return err
 	}
 
-	outputPath := safeOutputPath(outputDir, outputFileName, PDF_EXT)
+	outputPath := container.SafeOutputPath(outputDir, outputFileName, "pdf")
 
 	err = p.pdf.WritePdf(outputPath)
 	if err != nil {

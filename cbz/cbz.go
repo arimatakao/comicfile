@@ -1,4 +1,4 @@
-package comicfile
+package cbz
 
 import (
 	"archive/zip"
@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
 )
 
@@ -25,8 +26,8 @@ type cbzReader struct {
 	metadata metadata.Metadata
 }
 
-// newCBZArchive creates an in-memory CBZ archive ready to receive pages.
-func newCBZArchive() (*cbzArchive, error) {
+// New creates an in-memory CBZ archive ready to receive pages.
+func New() (*cbzArchive, error) {
 	buf := new(bytes.Buffer)
 
 	zipWriter := zip.NewWriter(buf)
@@ -74,7 +75,7 @@ func (c *cbzArchive) WriteOnDiskAndClose(outputDir, outputFileName string,
 		return err
 	}
 
-	outputPath := safeOutputPath(outputDir, outputFileName, CBZ_EXT)
+	outputPath := container.SafeOutputPath(outputDir, outputFileName, "cbz")
 
 	err = c.writer.Close()
 	if err != nil {
@@ -104,8 +105,8 @@ func (c *cbzArchive) AddPage(fileExt string, src []byte) error {
 	return nil
 }
 
-// openCBZContainer creates a reader for the image files in a CBZ archive.
-func openCBZContainer(path string) (*cbzReader, error) {
+// Open creates a reader for the image files in a CBZ archive.
+func Open(path string) (*cbzReader, error) {
 	archive, err := zip.OpenReader(path)
 	if err != nil {
 		return nil, err
@@ -154,7 +155,7 @@ func (c *cbzReader) Metadata() *metadata.Metadata {
 // Page returns the decoded image at index.
 func (c *cbzReader) Page(index int) (image.Image, error) {
 	if index < 0 || index >= len(c.pages) {
-		return nil, ErrPageIndexOutOfRange
+		return nil, container.ErrPageIndexOutOfRange
 	}
 
 	return c.pages[index], nil

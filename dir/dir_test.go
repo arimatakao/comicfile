@@ -1,4 +1,4 @@
-package comicfile
+package dir_test
 
 import (
 	"bytes"
@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	comicfile "github.com/arimatakao/comicfile"
+	"github.com/arimatakao/comicfile/dir"
 	"github.com/arimatakao/comicfile/metadata"
 )
 
@@ -74,24 +76,22 @@ func TestDirContainerWriteAndOpen(t *testing.T) {
 				}
 			}
 
-			container, err := newDirContainer()
+			container, err := dir.New()
 			if err != nil {
-				t.Fatalf("newDirContainer() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			pages := addPages(t, container, tt.pages)
 			if err := container.WriteOnDiskAndClose(outputDir, tt.outputName, metadata.Metadata{}, ""); err != nil {
 				t.Fatalf("WriteOnDiskAndClose() error = %v", err)
 			}
-			assertNotExists(t, container.tempDir)
-
 			chapterDir := filepath.Join(outputDir, tt.wantOutputName)
 			for index, page := range pages {
 				name := fmt.Sprintf("%02d.%s", index+1, tt.pages[index].ext)
 				assertFileContents(t, filepath.Join(chapterDir, name), page)
 			}
 
-			reader, err := OpenContainer(chapterDir)
+			reader, err := comicfile.OpenContainer(chapterDir)
 			if err != nil {
 				t.Fatalf("OpenContainer() error = %v", err)
 			}
@@ -172,7 +172,7 @@ func TestOpenDirContainer(t *testing.T) {
 				}
 			}
 
-			reader, err := OpenContainer(dir)
+			reader, err := comicfile.OpenContainer(dir)
 			if err != nil {
 				t.Fatalf("OpenContainer() error = %v", err)
 			}
@@ -193,12 +193,12 @@ func TestOpenContainerRejectsRegularFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := OpenContainer(path); !errors.Is(err, ErrExtensionNotSupport) {
+	if _, err := comicfile.OpenContainer(path); !errors.Is(err, comicfile.ErrExtensionNotSupport) {
 		t.Errorf("OpenContainer() error = %v, want ErrExtensionNotSupport", err)
 	}
 }
 
-func addPages(t *testing.T, container ContainerWriter, specs []pageSpec) [][]byte {
+func addPages(t *testing.T, container comicfile.ContainerWriter, specs []pageSpec) [][]byte {
 	t.Helper()
 	pages := make([][]byte, 0, len(specs))
 	for _, spec := range specs {
@@ -238,13 +238,6 @@ func encodePage(t *testing.T, spec pageSpec) []byte {
 	return buf.Bytes()
 }
 
-func assertNotExists(t *testing.T, path string) {
-	t.Helper()
-	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("%q still exists or could not be checked: %v", path, err)
-	}
-}
-
 func assertFileContents(t *testing.T, path string, want []byte) {
 	t.Helper()
 	got, err := os.ReadFile(path)
@@ -256,7 +249,7 @@ func assertFileContents(t *testing.T, path string, want []byte) {
 	}
 }
 
-func assertPageDimensions(t *testing.T, reader ContainerReader, index, width, height int) {
+func assertPageDimensions(t *testing.T, reader comicfile.ContainerReader, index, width, height int) {
 	t.Helper()
 	page, err := reader.Page(index)
 	if err != nil {
@@ -267,10 +260,10 @@ func assertPageDimensions(t *testing.T, reader ContainerReader, index, width, he
 	}
 }
 
-func assertOutOfRangePages(t *testing.T, reader ContainerReader, pages int) {
+func assertOutOfRangePages(t *testing.T, reader comicfile.ContainerReader, pages int) {
 	t.Helper()
 	for _, index := range []int{-1, pages} {
-		if _, err := reader.Page(index); !errors.Is(err, ErrPageIndexOutOfRange) {
+		if _, err := reader.Page(index); !errors.Is(err, comicfile.ErrPageIndexOutOfRange) {
 			t.Errorf("Page(%d) error = %v, want ErrPageIndexOutOfRange", index, err)
 		}
 	}

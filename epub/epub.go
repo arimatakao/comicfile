@@ -1,10 +1,11 @@
-package comicfile
+package epub
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
 	"github.com/go-shiori/go-epub"
 )
@@ -18,9 +19,9 @@ type epubArchive struct {
 	pageIndex  int
 }
 
-// newEpubArchive creates an EPUB builder and a temporary directory for page
+// New creates an EPUB builder and a temporary directory for page
 // images that will be embedded during finalization.
-func newEpubArchive() (*epubArchive, error) {
+func New() (*epubArchive, error) {
 	book, err := epub.NewEpub("")
 	if err != nil {
 		return &epubArchive{}, err
@@ -81,7 +82,7 @@ func (e *epubArchive) WriteOnDiskAndClose(outputDir string, outputFileName strin
 		return err
 	}
 
-	outputPath := safeOutputPath(outputDir, outputFileName, EPUB_EXT)
+	outputPath := container.SafeOutputPath(outputDir, outputFileName, "epub")
 
 	err = e.b.Write(outputPath)
 	if err != nil {

@@ -1,4 +1,4 @@
-package comicfile
+package dir
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
 )
 
@@ -23,9 +24,9 @@ type dirReader struct {
 	errPages int
 }
 
-// newDirContainer creates a directory-backed container with a temporary
+// New creates a directory-backed container with a temporary
 // staging directory for page files.
-func newDirContainer() (*dirContainer, error) {
+func New() (*dirContainer, error) {
 	tempDir, err := os.MkdirTemp("", "mdxdirfiles")
 	if err != nil {
 		return nil, err
@@ -37,9 +38,9 @@ func newDirContainer() (*dirContainer, error) {
 	}, nil
 }
 
-// openDirContainer creates a reader for the image files in path. Pages are
+// Open creates a reader for the image files in path. Pages are
 // ordered by filename, matching the naming convention used by dirContainer.
-func openDirContainer(path string) (*dirReader, error) {
+func Open(path string) (*dirReader, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -80,7 +81,7 @@ func (d *dirReader) Metadata() *metadata.Metadata {
 // Page returns the decoded image at index.
 func (d *dirReader) Page(index int) (image.Image, error) {
 	if index < 0 || index >= len(d.pages) {
-		return nil, ErrPageIndexOutOfRange
+		return nil, container.ErrPageIndexOutOfRange
 	}
 
 	return d.pages[index], nil
@@ -105,7 +106,7 @@ func (d *dirContainer) WriteOnDiskAndClose(outputDir, outputFileName string,
 		return err
 	}
 
-	outputPath := safeOutputDirPath(outputDir, outputFileName)
+	outputPath := container.SafeOutputDirPath(outputDir, outputFileName)
 	if err := os.MkdirAll(outputPath, os.ModePerm); err != nil {
 		return err
 	}
