@@ -7,6 +7,7 @@ import (
 	_ "image/png"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
@@ -35,9 +36,20 @@ func Open(path string) (*pdfReader, error) {
 	defer file.Close()
 
 	reader := &pdfReader{}
-	if properties, err := api.Properties(file, nil); err == nil {
-		reader.metadata = metadataFromProperties(properties)
+	info, err := api.PDFInfo(file, path, nil, false, nil)
+	if err != nil {
+		return nil, err
 	}
+	properties := make(map[string]string, len(info.Properties)+5)
+	for key, value := range info.Properties {
+		properties[key] = value
+	}
+	properties["Title"] = info.Title
+	properties["Author"] = info.Author
+	properties["Subject"] = info.Subject
+	properties["Creator"] = info.Creator
+	properties["Keywords"] = strings.Join(info.Keywords, ", ")
+	reader.metadata = metadataFromProperties(properties)
 	if _, err := file.Seek(0, 0); err != nil {
 		return nil, err
 	}
@@ -113,6 +125,7 @@ func metadataFromProperties(properties map[string]string) metadata.Metadata {
 		},
 		P: metadata.PlainMetadata{
 			Authors: properties["Author"],
+			Tags:    properties["Keywords"],
 		},
 	}
 }

@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"image"
 	"os"
-	"time"
 
 	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/signintech/gopdf"
 )
 
@@ -35,16 +35,6 @@ func New() (pdfFile, error) {
 // file below outputDir, and closes the writer.
 func (p pdfFile) WriteOnDiskAndClose(outputDir, outputFileName string,
 	m metadata.Metadata, chapterRange string) error {
-	author := m.P.Authors + " | " + m.P.Artists
-
-	p.pdf.SetInfo(gopdf.PdfInfo{
-		Title:        m.CI.Title,
-		Author:       author,
-		Subject:      m.CBI.ComicBookInfoData.Title,
-		Creator:      m.CBI.AppID,
-		Producer:     m.CBI.AppID,
-		CreationDate: time.Now(),
-	})
 
 	err := os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
@@ -63,7 +53,24 @@ func (p pdfFile) WriteOnDiskAndClose(outputDir, outputFileName string,
 		return err
 	}
 
-	return nil
+	return api.AddPropertiesFile(outputPath, outputPath, metadataProperties(m), nil)
+}
+
+func metadataProperties(m metadata.Metadata) map[string]string {
+	properties := map[string]string{}
+	for key, value := range map[string]string{
+		"Title":    m.CI.Title,
+		"Author":   m.P.Authors,
+		"Subject":  m.CBI.ComicBookInfoData.Title,
+		"Creator":  m.CBI.AppID,
+		"Producer": m.CBI.AppID,
+		"Keywords": m.P.Tags,
+	} {
+		if value != "" {
+			properties[key] = value
+		}
+	}
+	return properties
 }
 
 // AddPage creates a page matching the decoded image dimensions and places the

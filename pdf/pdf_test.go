@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"image/png"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/arimatakao/comicfile"
@@ -33,7 +34,10 @@ func TestPDFWriteAndOpen(t *testing.T) {
 			ComicBookInfoData: metadata.ComicBookInfo{Title: "Image title"},
 		},
 		CI: metadata.ComicInfoMetadata{Title: "Chapter"},
-		P:  metadata.PlainMetadata{Authors: "Author"},
+		P: metadata.PlainMetadata{
+			Authors: "Author",
+			Tags:    "tag",
+		},
 	}
 	if err := writer.WriteOnDiskAndClose(outputDir, "chapter", wantMetadata, ""); err != nil {
 		t.Fatalf("WriteOnDiskAndClose() error = %v", err)
@@ -49,8 +53,22 @@ func TestPDFWriteAndOpen(t *testing.T) {
 	if got := reader.ErrPages(); got != 0 {
 		t.Errorf("ErrPages() = %d, want 0", got)
 	}
-	if got := reader.Metadata(); got == nil {
-		t.Error("Metadata() = nil, want non-nil metadata")
+	wantReadMetadata := metadata.Metadata{
+		CBI: metadata.ComicBookMetadata{
+			AppID:             "test-app",
+			ComicBookInfoData: metadata.ComicBookInfo{Title: "Image title"},
+		},
+		CI: metadata.ComicInfoMetadata{
+			Title:   "Chapter",
+			Summary: "Image title",
+		},
+		P: metadata.PlainMetadata{
+			Authors: "Author",
+			Tags:    "tag",
+		},
+	}
+	if got := reader.Metadata(); !reflect.DeepEqual(*got, wantReadMetadata) {
+		t.Errorf("Metadata() = %#v, want %#v", *got, wantReadMetadata)
 	}
 
 	for index, want := range pages {
