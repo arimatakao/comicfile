@@ -198,7 +198,7 @@ func TestOpenContainerRejectsRegularFile(t *testing.T) {
 	}
 }
 
-func addPages(t *testing.T, container *dirContainer, specs []pageSpec) [][]byte {
+func addPages(t *testing.T, container ContainerWriter, specs []pageSpec) [][]byte {
 	t.Helper()
 	pages := make([][]byte, 0, len(specs))
 	for _, spec := range specs {

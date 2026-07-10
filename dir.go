@@ -72,6 +72,11 @@ func (d *dirReader) ErrPages() int {
 	return d.errPages
 }
 
+// Metadata returns the metadata stored in the directory container.
+func (d *dirReader) Metadata() *metadata.Metadata {
+	return nil
+}
+
 // Page returns the decoded image at index.
 func (d *dirReader) Page(index int) (image.Image, error) {
 	if index < 0 || index >= len(d.pages) {

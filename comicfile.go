@@ -75,13 +75,15 @@ type ContainerReader interface {
 	TotalPages() int
 	// ErrPages returns the number of pages that could not be read.
 	ErrPages() int
+	// Metadata returns the metadata stored in the container.
+	Metadata() *metadata.Metadata
 	// Page returns the image for the page at index.
 	Page(index int) (image.Image, error)
 }
 
 // OpenContainer opens a readable comic chapter container.
 //
-// Currently, directory containers are supported.
+// Directory and CBZ containers are supported.
 func OpenContainer(path string) (ContainerReader, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -90,6 +92,9 @@ func OpenContainer(path string) (ContainerReader, error) {
 
 	if info.IsDir() {
 		return openDirContainer(path)
+	}
+	if strings.EqualFold(filepath.Ext(path), "."+CBZ_EXT) {
+		return openCBZContainer(path)
 	}
 
 	return nil, ErrExtensionNotSupport

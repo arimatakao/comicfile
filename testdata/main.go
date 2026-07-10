@@ -1,4 +1,4 @@
-// Command generate-testdata creates directory-container fixtures for package tests.
+// Command generate-testdata creates container fixtures for package tests.
 //
 // Run it from the repository root:
 //
@@ -16,6 +16,7 @@ import (
 	"log"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/arimatakao/comicfile"
 	"github.com/arimatakao/comicfile/metadata"
@@ -30,7 +31,9 @@ type fixture struct {
 
 type containerCase struct {
 	name     string
+	format   string
 	fixtures []fixture
+	metadata metadata.Metadata
 }
 
 func main() {
@@ -60,37 +63,53 @@ func main() {
 		ext:     "txt",
 		content: []byte("This is intentionally not an image.\n"),
 	}
+	cbzMetadata := metadata.Metadata{
+		CBI: metadata.ComicBookMetadata{AppID: "comicfile-testdata"},
+		CI:  metadata.ComicInfoMetadata{Title: "CBZ test chapter"},
+	}
 
 	cases := []containerCase{
-		{name: "dir-container-empty"},
+		{name: "dir-container-empty", format: comicfile.DIR_EXT},
 		{
 			name:     "dir-container-one-valid-png-3x2",
+			format:   comicfile.DIR_EXT,
 			fixtures: []fixture{pngFixture},
 		},
 		{
 			name:     "dir-container-one-valid-jpeg-2x3",
+			format:   comicfile.DIR_EXT,
 			fixtures: []fixture{jpegFixture},
 		},
 		{
 			name:     "dir-container-one-valid-gif-1x1",
+			format:   comicfile.DIR_EXT,
 			fixtures: []fixture{gifFixture},
 		},
 		{
 			name:     "dir-container-valid-png-jpeg-gif",
+			format:   comicfile.DIR_EXT,
 			fixtures: []fixture{pngFixture, jpegFixture, gifFixture},
 		},
 		{
 			name:     "dir-container-only-invalid-text",
+			format:   comicfile.DIR_EXT,
 			fixtures: []fixture{invalidTextFixture},
 		},
 		{
 			name:     "dir-container-valid-png-and-invalid-text",
+			format:   comicfile.DIR_EXT,
 			fixtures: []fixture{pngFixture, invalidTextFixture},
 		},
 	}
+	for _, testCase := range cases {
+		testCase.name = strings.Replace(testCase.name, "dir-", "cbz-", 1)
+		testCase.format = comicfile.CBZ_EXT
+		testCase.metadata = cbzMetadata
+		cases = append(cases, testCase)
+	}
 
 	for _, testCase := range cases {
-		container, err := comicfile.NewContainer(comicfile.DIR_EXT)
+		container, err := comicfile.NewContainer(testCase.format)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,7 +124,7 @@ func main() {
 			}
 		}
 
-		if err := container.WriteOnDiskAndClose(outputDir, testCase.name, metadata.Metadata{}, ""); err != nil {
+		if err := container.WriteOnDiskAndClose(outputDir, testCase.name, testCase.metadata, ""); err != nil {
 			log.Fatal(err)
 		}
 	}
