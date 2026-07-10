@@ -18,6 +18,8 @@ var (
 	ErrPageIndexOutOfRange = errors.New("page index out of range")
 )
 
+// SafeOutputPath returns an unused path in outputDir with the given file name
+// and extension.
 func SafeOutputPath(outputDir, outputFileName, extension string) string {
 	outputFileName = SafeOutputName(outputFileName)
 	outputPath := filepath.Join(outputDir, outputFileName+"."+extension)
@@ -29,6 +31,8 @@ func SafeOutputPath(outputDir, outputFileName, extension string) string {
 	}
 }
 
+// SafeOutputDirPath returns an unused directory path in outputDir with the
+// given file name.
 func SafeOutputDirPath(outputDir, outputFileName string) string {
 	outputFileName = SafeOutputName(outputFileName)
 	outputPath := filepath.Join(outputDir, outputFileName)
@@ -40,6 +44,7 @@ func SafeOutputDirPath(outputDir, outputFileName string) string {
 	}
 }
 
+// SafeOutputName replaces characters that are unsafe in output file names.
 func SafeOutputName(outputFileName string) string {
 	for _, character := range []string{"/", `\\`, "<", ">", ":", `"`, "?", "*"} {
 		outputFileName = strings.ReplaceAll(outputFileName, character, "_")
