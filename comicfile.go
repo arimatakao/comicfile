@@ -3,6 +3,7 @@ package comicfile
 import (
 	"errors"
 	"fmt"
+	"image"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,9 +22,14 @@ const (
 	DIR_EXT = "dir"
 )
 
-// ErrExtensionNotSupport is returned when a requested output container
-// extension is unknown.
-var ErrExtensionNotSupport = errors.New("extension container is not supported")
+var (
+	// ErrExtensionNotSupport is returned when a requested output container
+	// extension is unknown.
+	ErrExtensionNotSupport = errors.New("extension container is not supported")
+	// ErrPageIndexOutOfRange is returned when a page index is outside the
+	// container's page range.
+	ErrPageIndexOutOfRange = errors.New("page index out of range")
+)
 
 // IsNotSupported reports whether fileFormat is not one of the supported
 // container extensions.
@@ -69,11 +75,25 @@ type ContainerReader interface {
 	TotalPages() int
 	// ErrPages returns the number of pages that could not be read.
 	ErrPages() int
-	// Page returns the image data for the page at index.
-	Page(index int) ([]byte, error)
+	// Page returns the image for the page at index.
+	Page(index int) (image.Image, error)
 }
 
-// func OpenContainer(filepath string) (ContainerReader, err)
+// OpenContainer opens a readable comic chapter container.
+//
+// Currently, directory containers are supported.
+func OpenContainer(path string) (ContainerReader, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if info.IsDir() {
+		return openDirContainer(path)
+	}
+
+	return nil, ErrExtensionNotSupport
+}
 
 // safeOutputPath returns a non-existing output path for a file container.
 // It sanitizes outputFileName and appends a numeric suffix when needed to
