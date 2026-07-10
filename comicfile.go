@@ -99,9 +99,3 @@ func OpenContainer(path string) (ContainerReader, error) {
 
 	return nil, container.ErrExtensionNotSupported
 }
-
-// SafeOutputName replaces path separators and characters that are invalid in
-// common output file systems while preserving a single file or directory name.
-func SafeOutputName(outputFileName string) string {
-	return container.SafeOutputName(outputFileName)
-}
