@@ -6,16 +6,23 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
+	"sort"
 
 	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 type pdfReader struct {
 	pages    []image.Image
 	errPages int
 	metadata metadata.Metadata
+}
+
+type extractedPageImage struct {
+	pageNumber int
+	image      model.Image
 }
 
 // Open creates a reader for PDF files containing one embedded image per page.
@@ -40,7 +47,7 @@ func Open(path string) (*pdfReader, error) {
 		return nil, err
 	}
 
-	reader.pages = make([]image.Image, 0, len(images))
+	extractedImages := make([]extractedPageImage, 0, len(images))
 	for _, pageImages := range images {
 		if len(pageImages) != 1 {
 			reader.errPages++
@@ -48,13 +55,21 @@ func Open(path string) (*pdfReader, error) {
 		}
 
 		for _, pageImage := range pageImages {
-			page, _, err := image.Decode(pageImage)
-			if err != nil {
-				reader.errPages++
-				continue
-			}
-			reader.pages = append(reader.pages, page)
+			extractedImages = append(extractedImages, extractedPageImage{pageNumber: pageImage.PageNr, image: pageImage})
 		}
+	}
+	sort.Slice(extractedImages, func(i, j int) bool {
+		return extractedImages[i].pageNumber < extractedImages[j].pageNumber
+	})
+
+	reader.pages = make([]image.Image, 0, len(extractedImages))
+	for _, pageImage := range extractedImages {
+		page, _, err := image.Decode(pageImage.image)
+		if err != nil {
+			reader.errPages++
+			continue
+		}
+		reader.pages = append(reader.pages, page)
 	}
 
 	return reader, nil

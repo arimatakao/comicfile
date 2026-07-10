@@ -20,7 +20,7 @@ func TestPDFWriteAndOpen(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 
-	pages := []image.Point{{X: 3, Y: 2}, {X: 2, Y: 3}}
+	pages := []image.Point{{X: 3, Y: 2}, {X: 2, Y: 3}, {X: 4, Y: 5}}
 	for _, page := range pages {
 		if err := writer.AddPage("png", pngPage(t, page.X, page.Y)); err != nil {
 			t.Fatalf("AddPage() error = %v", err)
