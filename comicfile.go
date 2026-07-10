@@ -1,7 +1,6 @@
 package comicfile
 
 import (
-	"errors"
 	"image"
 	"os"
 	"path/filepath"
@@ -24,15 +23,6 @@ const (
 	EPUB_EXT = "epub"
 	// DIR_EXT stores chapter pages in a plain directory.
 	DIR_EXT = "dir"
-)
-
-var (
-	// ErrExtensionNotSupport is returned when a requested output container
-	// extension is unknown.
-	ErrExtensionNotSupport = errors.New("extension container is not supported")
-	// ErrPageIndexOutOfRange is returned when a page index is outside the
-	// container's page range.
-	ErrPageIndexOutOfRange = container.ErrPageIndexOutOfRange
 )
 
 // IsNotSupported reports whether fileFormat is not one of the supported
@@ -70,7 +60,7 @@ func NewContainer(extension string) (ContainerWriter, error) {
 		return dir.New()
 	}
 
-	return nil, ErrExtensionNotSupport
+	return nil, container.ErrExtensionNotSupported
 }
 
 // ContainerReader describes a readable comic chapter container.
@@ -101,7 +91,7 @@ func OpenContainer(path string) (ContainerReader, error) {
 		return cbz.Open(path)
 	}
 
-	return nil, ErrExtensionNotSupport
+	return nil, container.ErrExtensionNotSupported
 }
 
 // SafeOutputName replaces path separators and characters that are invalid in

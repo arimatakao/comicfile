@@ -9,9 +9,14 @@ import (
 	"strings"
 )
 
-// ErrPageIndexOutOfRange reports an attempt to read a page outside the
-// container's page range.
-var ErrPageIndexOutOfRange = errors.New("page index out of range")
+var (
+	// ErrExtensionNotSupported reports an unsupported output container
+	// extension.
+	ErrExtensionNotSupported = errors.New("extension container is not supported")
+	// ErrPageIndexOutOfRange reports an attempt to read a page outside the
+	// container's page range.
+	ErrPageIndexOutOfRange = errors.New("page index out of range")
+)
 
 func SafeOutputPath(outputDir, outputFileName, extension string) string {
 	outputFileName = SafeOutputName(outputFileName)

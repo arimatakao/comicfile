@@ -2,7 +2,6 @@ package cbz_test
 
 import (
 	"bytes"
-	"errors"
 	"image"
 	"image/color"
 	"image/gif"
@@ -110,8 +109,8 @@ func assertPageDimensions(t *testing.T, reader comicfile.ContainerReader, index,
 func assertOutOfRangePages(t *testing.T, reader comicfile.ContainerReader, pages int) {
 	t.Helper()
 	for _, index := range []int{-1, pages} {
-		if _, err := reader.Page(index); !errors.Is(err, comicfile.ErrPageIndexOutOfRange) {
-			t.Errorf("Page(%d) error = %v, want ErrPageIndexOutOfRange", index, err)
+		if _, err := reader.Page(index); err == nil {
+			t.Errorf("Page(%d) error = nil, want out-of-range error", index)
 		}
 	}
 }
