@@ -67,6 +67,12 @@ func main() {
 		CBI: metadata.ComicBookMetadata{AppID: "comicfile-testdata"},
 		CI:  metadata.ComicInfoMetadata{Title: "CBZ test chapter"},
 	}
+	epubMetadata := metadata.Metadata{
+		CI: metadata.ComicInfoMetadata{
+			Title: "EPUB test chapter", LanguageISO: "uk", Summary: "EPUB test summary",
+		},
+		P: metadata.PlainMetadata{Authors: "EPUB test author"},
+	}
 
 	cases := []containerCase{
 		{name: "dir-container-empty", format: comicfile.DIR_EXT},
@@ -105,6 +111,15 @@ func main() {
 		testCase.name = strings.Replace(testCase.name, "dir-", "cbz-", 1)
 		testCase.format = comicfile.CBZ_EXT
 		testCase.metadata = cbzMetadata
+		cases = append(cases, testCase)
+	}
+	for _, testCase := range cases {
+		if !strings.HasPrefix(testCase.name, "dir-") {
+			continue
+		}
+		testCase.name = strings.Replace(testCase.name, "dir-", "epub-", 1)
+		testCase.format = comicfile.EPUB_EXT
+		testCase.metadata = epubMetadata
 		cases = append(cases, testCase)
 	}
 
