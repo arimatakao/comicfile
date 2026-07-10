@@ -18,7 +18,7 @@ type cbzArchive struct {
 	pageCounter int
 }
 
-// fileName without extension
+// newCBZArchive creates an in-memory CBZ archive ready to receive pages.
 func newCBZArchive() (*cbzArchive, error) {
 	buf := new(bytes.Buffer)
 
@@ -33,7 +33,8 @@ func newCBZArchive() (*cbzArchive, error) {
 	return &c, nil
 }
 
-// ALWAYS close archive after all operations
+// WriteOnDiskAndClose adds ComicBookInfo and ComicInfo metadata, closes the
+// archive, and writes it to a unique CBZ file in outputDir.
 func (c *cbzArchive) WriteOnDiskAndClose(outputDir, outputFileName string,
 	m metadata.Metadata, chapterRange string) error {
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
@@ -81,6 +82,7 @@ func (c *cbzArchive) WriteOnDiskAndClose(outputDir, outputFileName string,
 	return nil
 }
 
+// AddPage stores image bytes as the next zero-padded page file in the archive.
 func (c *cbzArchive) AddPage(fileExt string, src []byte) error {
 	fileName := fmt.Sprintf("%02d.%s", c.pageCounter, fileExt)
 	buf := bytes.NewBuffer(src)

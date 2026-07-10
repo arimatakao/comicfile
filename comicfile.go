@@ -63,6 +63,9 @@ func NewContainer(extension string) (Container, error) {
 	return nil, ErrExtensionNotSupport
 }
 
+// safeOutputPath returns a non-existing output path for a file container.
+// It sanitizes outputFileName and appends a numeric suffix when needed to
+// avoid overwriting an existing file.
 func safeOutputPath(outputDir, outputFileName, extension string) string {
 	outputFileName = SafeOutputName(outputFileName)
 
@@ -79,6 +82,9 @@ func safeOutputPath(outputDir, outputFileName, extension string) string {
 	return outputPath
 }
 
+// safeOutputDirPath returns a non-existing output path for a directory
+// container. It sanitizes outputFileName and appends a numeric suffix when
+// the target directory already exists.
 func safeOutputDirPath(outputDir, outputFileName string) string {
 	outputFileName = SafeOutputName(outputFileName)
 

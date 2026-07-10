@@ -18,6 +18,8 @@ type epubArchive struct {
 	pageIndex  int
 }
 
+// newEpubArchive creates an EPUB builder and a temporary directory for page
+// images that will be embedded during finalization.
 func newEpubArchive() (*epubArchive, error) {
 	book, err := epub.NewEpub("")
 	if err != nil {
@@ -37,6 +39,8 @@ func newEpubArchive() (*epubArchive, error) {
 	}, nil
 }
 
+// WriteOnDiskAndClose adds the staged images and metadata to the EPUB, writes
+// it to a unique file in outputDir, and removes the temporary image directory.
 func (e *epubArchive) WriteOnDiskAndClose(outputDir string, outputFileName string,
 	m metadata.Metadata, chapterRange string) error {
 
@@ -87,6 +91,8 @@ func (e *epubArchive) WriteOnDiskAndClose(outputDir string, outputFileName strin
 	return os.RemoveAll(e.tempDir)
 }
 
+// AddPage stages image bytes as the next zero-padded page file for inclusion
+// in the EPUB during finalization.
 func (e *epubArchive) AddPage(fileExt string, imageBytes []byte) error {
 	fileName := fmt.Sprintf("%02d.%s", e.pageIndex, fileExt)
 	filePath := filepath.Join(e.tempDir, fileName)

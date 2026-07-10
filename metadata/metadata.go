@@ -83,6 +83,8 @@ type ChapterProvider interface {
 	PagesCount() int
 }
 
+// NewMetadata builds ComicBookInfo, ComicInfo, and plain metadata from manga
+// and chapter providers for use by the supported output containers.
 func NewMetadata(appId string, m MangaProvider, c ChapterProvider) Metadata {
 
 	credits := []Credit{}

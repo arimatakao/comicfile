@@ -14,6 +14,8 @@ type pdfFile struct {
 	pdf *gopdf.GoPdf
 }
 
+// newPdfFile creates a PDF container configured to preserve original image
+// data and accept pages of arbitrary dimensions.
 func newPdfFile() (pdfFile, error) {
 
 	pdf := new(gopdf.GoPdf)
@@ -28,6 +30,8 @@ func newPdfFile() (pdfFile, error) {
 	}, nil
 }
 
+// WriteOnDiskAndClose applies document metadata, writes the PDF to a unique
+// file in outputDir, and closes the PDF writer.
 func (p pdfFile) WriteOnDiskAndClose(outputDir, outputFileName string,
 	m metadata.Metadata, chapterRange string) error {
 	author := m.P.Authors + " | " + m.P.Artists
@@ -61,6 +65,8 @@ func (p pdfFile) WriteOnDiskAndClose(outputDir, outputFileName string,
 	return nil
 }
 
+// AddPage decodes image dimensions, creates a matching PDF page, and places
+// the image at its original size.
 func (p pdfFile) AddPage(fileName string, imageBytes []byte) error {
 	imgWidth, imgHeight, err := getImageDimensions(imageBytes)
 	if err != nil {
@@ -90,6 +96,7 @@ func (p pdfFile) AddPage(fileName string, imageBytes []byte) error {
 	return nil
 }
 
+// getImageDimensions returns the decoded pixel width and height of img.
 func getImageDimensions(img []byte) (float64, float64, error) {
 	buf := bytes.NewBuffer(img)
 	config, _, err := image.DecodeConfig(buf)

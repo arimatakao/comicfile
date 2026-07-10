@@ -14,6 +14,8 @@ type dirContainer struct {
 	pageIndex int
 }
 
+// newDirContainer creates a directory-backed container with a temporary
+// staging directory for page files.
 func newDirContainer() (*dirContainer, error) {
 	tempDir, err := os.MkdirTemp("", "mdxdirfiles")
 	if err != nil {
@@ -26,6 +28,8 @@ func newDirContainer() (*dirContainer, error) {
 	}, nil
 }
 
+// WriteOnDiskAndClose copies staged page files into a unique directory in
+// outputDir, then removes the temporary staging directory.
 func (d *dirContainer) WriteOnDiskAndClose(outputDir, outputFileName string,
 	m metadata.Metadata, chapterRange string) error {
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
@@ -57,6 +61,8 @@ func (d *dirContainer) WriteOnDiskAndClose(outputDir, outputFileName string,
 	return os.RemoveAll(d.tempDir)
 }
 
+// AddPage writes image bytes to the staging directory using the next
+// zero-padded page filename.
 func (d *dirContainer) AddPage(fileExt string, imageBytes []byte) error {
 	fileName := fmt.Sprintf("%02d.%s", d.pageIndex, fileExt)
 	filePath := filepath.Join(d.tempDir, fileName)
@@ -68,6 +74,8 @@ func (d *dirContainer) AddPage(fileExt string, imageBytes []byte) error {
 	return nil
 }
 
+// copyFile copies the complete contents of srcPath into a newly created file
+// at dstPath.
 func copyFile(srcPath, dstPath string) error {
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
