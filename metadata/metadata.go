@@ -6,21 +6,28 @@ import (
 	"time"
 )
 
+// Metadata contains the metadata representations written by the supported
+// comic container formats.
 type Metadata struct {
-	// ComicBookInfo format
+	// CBI is metadata in the ComicBookInfo format.
 	CBI ComicBookMetadata
-	// ComicRack old metadata
+	// CI is metadata in the ComicInfo.xml format.
 	CI ComicInfoMetadata
-	// Plain metadata
+	// P contains metadata shared by formats that do not use a comic-specific
+	// schema.
 	P PlainMetadata
 }
 
+// PlainMetadata contains author, artist, and tag values for formats with no
+// dedicated comic metadata schema.
 type PlainMetadata struct {
 	Authors string
 	Artists string
 	Tags    string
 }
 
+// ComicInfoMetadata is the ComicInfo.xml metadata schema used by ComicRack and
+// CBZ readers.
 type ComicInfoMetadata struct {
 	XMLName     xml.Name `xml:"ComicInfo"`
 	Title       string   `xml:"Title"`
@@ -38,12 +45,16 @@ type ComicInfoMetadata struct {
 	Summary     string   `xml:"Summary"`
 }
 
+// ComicBookMetadata is the ComicBookInfo metadata stored in a CBZ archive
+// comment.
 type ComicBookMetadata struct {
 	AppID             string        `json:"appID"`
 	LastModified      string        `json:"lastModified"`
 	ComicBookInfoData ComicBookInfo `json:"ComicBookInfo/1.0"`
 }
 
+// ComicBookInfo contains the ComicBookInfo 1.0 fields embedded in
+// ComicBookMetadata.
 type ComicBookInfo struct {
 	Series    string   `json:"series"`
 	Title     string   `json:"title"`
@@ -55,11 +66,13 @@ type ComicBookInfo struct {
 	Tags      []string `json:"tags"`
 }
 
+// Credit identifies a person and their role in creating a comic.
 type Credit struct {
 	Person string `json:"person"`
 	Role   string `json:"role"`
 }
 
+// MangaProvider supplies series-level information for NewMetadata.
 type MangaProvider interface {
 	Title(language string) string
 	Description(language string) string
@@ -75,6 +88,7 @@ type MangaProvider interface {
 	Links() string
 }
 
+// ChapterProvider supplies chapter-level information for NewMetadata.
 type ChapterProvider interface {
 	Title() string
 	Number() string
@@ -83,8 +97,8 @@ type ChapterProvider interface {
 	PagesCount() int
 }
 
-// NewMetadata builds ComicBookInfo, ComicInfo, and plain metadata from manga
-// and chapter providers for use by the supported output containers.
+// NewMetadata builds ComicBookInfo, ComicInfo.xml, and plain metadata from
+// series and chapter providers for use by the supported output containers.
 func NewMetadata(appId string, m MangaProvider, c ChapterProvider) Metadata {
 
 	credits := []Credit{}

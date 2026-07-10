@@ -15,13 +15,13 @@ import (
 )
 
 const (
-	// CBZ_EXT is a CBZ archive container extension.
+	// CBZ_EXT is the filename extension for CBZ archives.
 	CBZ_EXT = "cbz"
-	// PDF_EXT is a PDF container extension.
+	// PDF_EXT is the filename extension for PDF documents.
 	PDF_EXT = "pdf"
-	// EPUB_EXT is an EPUB container extension.
+	// EPUB_EXT is the filename extension for EPUB books.
 	EPUB_EXT = "epub"
-	// DIR_EXT stores chapter pages in a plain directory.
+	// DIR_EXT identifies the directory-based output format.
 	DIR_EXT = "dir"
 )
 
@@ -34,19 +34,21 @@ func IsNotSupported(fileFormat string) bool {
 		fileFormat != DIR_EXT
 }
 
-// Container describes a writable chapter output that accepts page images and
-// then persists itself to disk.
+// ContainerWriter accepts comic page images and writes a completed chapter to
+// disk.
 type ContainerWriter interface {
-	// WriteOnDiskAndClose finalizes container content and writes it into
-	// outputDir using outputFileName as a base name.
+	// WriteOnDiskAndClose finalizes the container and writes it below outputDir.
+	// outputFileName is used as the output name; m supplies metadata, and
+	// chapterRange optionally replaces the chapter portion of an EPUB title.
 	WriteOnDiskAndClose(outputDir string, outputFileName string, m metadata.Metadata, chapterRange string) error
-	// AddPage appends a new page represented by imageBytes with fileExt format.
+	// AddPage appends imageBytes as a page. fileExt is the image filename
+	// extension, without a leading period.
 	AddPage(fileExt string, imageBytes []byte) error
 }
 
 // NewContainer creates a container by file extension.
 //
-// Supported extensions are CBZ_EXT, PDF_EXT, EPUB_EXT and DIR_EXT.
+// extension must be one of CBZ_EXT, PDF_EXT, EPUB_EXT, or DIR_EXT.
 func NewContainer(extension string) (ContainerWriter, error) {
 
 	switch extension {
@@ -63,7 +65,8 @@ func NewContainer(extension string) (ContainerWriter, error) {
 	return nil, container.ErrExtensionNotSupported
 }
 
-// ContainerReader describes a readable comic chapter container.
+// ContainerReader provides page images and metadata from a comic chapter
+// container.
 type ContainerReader interface {
 	// TotalPages returns the number of pages in the container.
 	TotalPages() int
@@ -75,9 +78,10 @@ type ContainerReader interface {
 	Page(index int) (image.Image, error)
 }
 
-// OpenContainer opens a readable comic chapter container.
+// OpenContainer opens the comic chapter container at path.
 //
-// Directory, CBZ, EPUB, and PDF containers are supported.
+// The container format is selected from the path: a directory, or a file with
+// a CBZ_EXT, EPUB_EXT, or PDF_EXT extension.
 func OpenContainer(path string) (ContainerReader, error) {
 	info, err := os.Stat(path)
 	if err != nil {

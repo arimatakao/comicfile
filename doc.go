@@ -1,8 +1,8 @@
-// Package comicfile provides abstractions for writing manga chapter pages into
-// different output containers such as CBZ, PDF, EPUB, or a plain directory.
+// Package comicfile writes and reads comic or manga chapters stored as CBZ,
+// PDF, EPUB, or directories of image files.
 //
 // A typical flow is:
-//  1. Create a container with NewContainer.
-//  2. Add pages with Container.AddPage.
-//  3. Finalize output with Container.WriteOnDiskAndClose.
+//  1. Create a writer with NewContainer.
+//  2. Add image pages with ContainerWriter.AddPage.
+//  3. Write the completed container with ContainerWriter.WriteOnDiskAndClose.
 package comicfile
