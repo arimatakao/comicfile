@@ -1,7 +1,16 @@
+.vscode
+.idea
+
 other
 bin
 testdata/data
 
+examples/dir/file
+
 *.pdf
 *.cbz
 *.epub
+*.png
+*.jpeg
+*.jpg
+*.gif
