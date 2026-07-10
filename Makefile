@@ -8,3 +8,6 @@ vet:
 
 doc:
 	go doc --all
+
+tidy:
+	go mod tidy
