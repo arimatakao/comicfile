@@ -5,26 +5,34 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+	"os"
+	"sync"
 
 	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
 )
 
 type cbzReader struct {
-	pages    []image.Image
+	mu       sync.RWMutex
+	archive  *zip.ReadCloser
+	pages    []*zip.File
 	errPages int
 	metadata metadata.Metadata
+	closed   bool
 }
 
-// Open creates a reader for the image files in a CBZ archive.
+// Open creates a reader for image files in a CBZ archive. Page pixels are
+// decoded lazily by Page.
 func Open(path string) (*cbzReader, error) {
 	archive, err := zip.OpenReader(path)
 	if err != nil {
 		return nil, err
 	}
-	defer archive.Close()
 
-	reader := &cbzReader{pages: make([]image.Image, 0, len(archive.File))}
+	reader := &cbzReader{archive: archive, pages: make([]*zip.File, 0, len(archive.File))}
 	if archive.Comment != "" {
 		_ = json.Unmarshal([]byte(archive.Comment), &reader.metadata.CBI)
 	}
@@ -36,49 +44,65 @@ func Open(path string) (*cbzReader, error) {
 			_ = readComicInfo(file, &reader.metadata.CI)
 			continue
 		}
-
-		page, err := readCBZImage(file)
-		if err != nil {
+		if _, err := imageConfig(file); err != nil {
 			reader.errPages++
 			continue
 		}
-		reader.pages = append(reader.pages, page)
+		reader.pages = append(reader.pages, file)
 	}
-
 	return reader, nil
 }
 
-// TotalPages returns the number of readable images in the CBZ archive.
-func (c *cbzReader) TotalPages() int {
-	return len(c.pages)
-}
+func (c *cbzReader) TotalPages() int { return len(c.pages) }
 
-// ErrPages returns the number of archive entries that could not be read.
 func (c *cbzReader) ErrPages() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return c.errPages
 }
 
-// Metadata returns the metadata stored in the CBZ archive.
-func (c *cbzReader) Metadata() *metadata.Metadata {
-	return &c.metadata
-}
+func (c *cbzReader) Metadata() *metadata.Metadata { return &c.metadata }
 
-// Page returns the decoded image at index.
+// Page decodes and returns one page from the still-open archive.
 func (c *cbzReader) Page(index int) (image.Image, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if index < 0 || index >= len(c.pages) {
 		return nil, container.ErrPageIndexOutOfRange
 	}
-
-	return c.pages[index], nil
+	if c.closed {
+		return nil, os.ErrClosed
+	}
+	return decodeImageFile(c.pages[index])
 }
 
-func readCBZImage(file *zip.File) (image.Image, error) {
+// Close releases the open CBZ archive.
+func (c *cbzReader) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return nil
+	}
+	c.closed = true
+	return c.archive.Close()
+}
+
+func imageConfig(file *zip.File) (image.Config, error) {
+	reader, err := file.Open()
+	if err != nil {
+		return image.Config{}, err
+	}
+	defer reader.Close()
+	config, _, err := image.DecodeConfig(reader)
+	return config, err
+}
+
+func decodeImageFile(file *zip.File) (image.Image, error) {
 	reader, err := file.Open()
 	if err != nil {
 		return nil, err
 	}
 	defer reader.Close()
-
 	page, _, err := image.Decode(reader)
 	return page, err
 }
@@ -89,6 +113,5 @@ func readComicInfo(file *zip.File, comicInfo *metadata.ComicInfoMetadata) error 
 		return err
 	}
 	defer reader.Close()
-
 	return xml.NewDecoder(reader).Decode(comicInfo)
 }

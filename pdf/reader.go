@@ -1,42 +1,45 @@
 package pdf
 
 import (
+	"errors"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
-	"sort"
+	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+var errPageImageCount = errors.New("PDF page does not contain exactly one image")
+
 type pdfReader struct {
-	pages    []image.Image
+	mu       sync.RWMutex
+	path     string
+	pages    int
 	errPages int
 	metadata metadata.Metadata
 }
 
-type extractedPageImage struct {
-	pageNumber int
-	image      model.Image
-}
-
 // Open creates a reader for PDF files containing one embedded image per page.
+// Embedded images are extracted lazily by Page.
 func Open(path string) (*pdfReader, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-
 	defer file.Close()
 
-	reader := &pdfReader{}
 	info, err := api.PDFInfo(file, path, nil, false, nil)
+	if err != nil {
+		return nil, err
+	}
+	pages, err := api.PageCountFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -49,66 +52,56 @@ func Open(path string) (*pdfReader, error) {
 	properties["Subject"] = info.Subject
 	properties["Creator"] = info.Creator
 	properties["Keywords"] = strings.Join(info.Keywords, ", ")
-	reader.metadata = metadataFromProperties(properties)
-	if _, err := file.Seek(0, 0); err != nil {
-		return nil, err
-	}
-
-	images, err := api.ExtractImagesRaw(file, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	extractedImages := make([]extractedPageImage, 0, len(images))
-	for _, pageImages := range images {
-		if len(pageImages) != 1 {
-			reader.errPages++
-			continue
-		}
-
-		for _, pageImage := range pageImages {
-			extractedImages = append(extractedImages, extractedPageImage{pageNumber: pageImage.PageNr, image: pageImage})
-		}
-	}
-	sort.Slice(extractedImages, func(i, j int) bool {
-		return extractedImages[i].pageNumber < extractedImages[j].pageNumber
-	})
-
-	reader.pages = make([]image.Image, 0, len(extractedImages))
-	for _, pageImage := range extractedImages {
-		page, _, err := image.Decode(pageImage.image)
-		if err != nil {
-			reader.errPages++
-			continue
-		}
-		reader.pages = append(reader.pages, page)
-	}
-
-	return reader, nil
+	return &pdfReader{path: path, pages: pages, metadata: metadataFromProperties(properties)}, nil
 }
 
-// TotalPages returns the number of readable one-image PDF pages.
-func (p *pdfReader) TotalPages() int {
-	return len(p.pages)
-}
+func (p *pdfReader) TotalPages() int { return p.pages }
 
-// ErrPages returns the number of PDF pages that could not be read as one image.
 func (p *pdfReader) ErrPages() int {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.errPages
 }
 
-// Metadata returns metadata available in the PDF document information dictionary.
-func (p *pdfReader) Metadata() *metadata.Metadata {
-	return &p.metadata
-}
+func (p *pdfReader) Metadata() *metadata.Metadata { return &p.metadata }
 
-// Page returns the decoded image at index.
+// Page extracts and decodes one embedded image from the requested PDF page.
 func (p *pdfReader) Page(index int) (image.Image, error) {
-	if index < 0 || index >= len(p.pages) {
+	if index < 0 || index >= p.pages {
 		return nil, container.ErrPageIndexOutOfRange
 	}
+	file, err := os.Open(p.path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
 
-	return p.pages[index], nil
+	images, err := api.ExtractImagesRaw(file, []string{strconv.Itoa(index + 1)}, nil)
+	if err != nil {
+		p.recordError()
+		return nil, err
+	}
+	if len(images) != 1 || len(images[0]) != 1 {
+		p.recordError()
+		return nil, errPageImageCount
+	}
+	for _, raw := range images[0] {
+		page, _, err := image.Decode(raw)
+		if err != nil {
+			p.recordError()
+		}
+		return page, err
+	}
+	return nil, errPageImageCount
+}
+
+// Close implements comicfile.ContainerReader. PDF pages are opened per call.
+func (*pdfReader) Close() error { return nil }
+
+func (p *pdfReader) recordError() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.errPages++
 }
 
 func metadataFromProperties(properties map[string]string) metadata.Metadata {

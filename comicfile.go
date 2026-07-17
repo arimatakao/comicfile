@@ -2,6 +2,7 @@ package comicfile
 
 import (
 	"image"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,6 +69,8 @@ func NewContainer(extension string) (ContainerWriter, error) {
 // ContainerReader provides page images and metadata from a comic chapter
 // container.
 type ContainerReader interface {
+	// Close releases resources held by the reader.
+	io.Closer
 	// TotalPages returns the number of pages in the container.
 	TotalPages() int
 	// ErrPages returns the number of pages that could not be read.

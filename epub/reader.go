@@ -9,17 +9,22 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"os"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/arimatakao/comicfile/internal/container"
 	"github.com/arimatakao/comicfile/metadata"
 )
 
 type epubReader struct {
-	pages    []image.Image
+	mu       sync.RWMutex
+	archive  *zip.ReadCloser
+	pages    []*zip.File
 	errPages int
 	metadata metadata.Metadata
+	closed   bool
 }
 
 type epubContainer struct {
@@ -53,8 +58,12 @@ func Open(filePath string) (*epubReader, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer archive.Close()
-
+	keepArchive := false
+	defer func() {
+		if !keepArchive {
+			_ = archive.Close()
+		}
+	}()
 	files := make(map[string]*zip.File, len(archive.File))
 	for _, file := range archive.File {
 		files[file.Name] = file
@@ -81,7 +90,8 @@ func Open(filePath string) (*epubReader, error) {
 	}
 
 	reader := &epubReader{
-		pages: make([]image.Image, 0, len(packageDocument.Spine)),
+		archive: archive,
+		pages:   make([]*zip.File, 0, len(packageDocument.Spine)),
 		metadata: metadata.Metadata{
 			CI: metadata.ComicInfoMetadata{
 				Title:       packageDocument.Metadata.Title,
@@ -110,6 +120,7 @@ func Open(filePath string) (*epubReader, error) {
 		}
 		reader.readSection(sectionFile, sectionPath, files)
 	}
+	keepArchive = true
 	return reader, nil
 }
 
@@ -120,6 +131,8 @@ func (e *epubReader) TotalPages() int {
 
 // ErrPages returns the number of page references that could not be read.
 func (e *epubReader) ErrPages() int {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 	return e.errPages
 }
 
@@ -128,13 +141,28 @@ func (e *epubReader) Metadata() *metadata.Metadata {
 	return &e.metadata
 }
 
-// Page returns the decoded image at index.
+// Page decodes and returns one page from the still-open EPUB archive.
 func (e *epubReader) Page(index int) (image.Image, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 	if index < 0 || index >= len(e.pages) {
 		return nil, container.ErrPageIndexOutOfRange
 	}
+	if e.closed {
+		return nil, os.ErrClosed
+	}
+	return decodeImageFile(e.pages[index])
+}
 
-	return e.pages[index], nil
+// Close releases the open EPUB archive.
+func (e *epubReader) Close() error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed {
+		return nil
+	}
+	e.closed = true
+	return e.archive.Close()
 }
 
 func (e *epubReader) readSection(sectionFile *zip.File, sectionPath string, files map[string]*zip.File) {
@@ -173,13 +201,12 @@ func (e *epubReader) readSection(sectionFile *zip.File, sectionPath string, file
 			continue
 		}
 
-		page, err := decodeImageFile(imageFile)
-		if err != nil {
+		if _, err := imageConfig(imageFile); err != nil {
 			e.errPages++
 			continue
 		}
 
-		e.pages = append(e.pages, page)
+		e.pages = append(e.pages, imageFile)
 	}
 }
 
@@ -211,4 +238,14 @@ func decodeImageFile(file *zip.File) (image.Image, error) {
 
 	page, _, err := image.Decode(reader)
 	return page, err
+}
+
+func imageConfig(file *zip.File) (image.Config, error) {
+	reader, err := file.Open()
+	if err != nil {
+		return image.Config{}, err
+	}
+	defer reader.Close()
+	config, _, err := image.DecodeConfig(reader)
+	return config, err
 }

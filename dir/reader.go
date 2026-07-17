@@ -13,66 +13,64 @@ import (
 )
 
 type dirReader struct {
-	pages    []image.Image
+	pages    []string
 	errPages int
 }
 
-// Open creates a reader for the image files in path. Pages are
-// ordered by filename, matching the naming convention used by dirContainer.
+// Open creates a reader for image files in path. It records valid page paths
+// without decoding their pixels.
 func Open(path string) (*dirReader, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
-
-	reader := &dirReader{pages: make([]image.Image, 0, len(entries))}
+	reader := &dirReader{pages: make([]string, 0, len(entries))}
 	for _, entry := range entries {
 		if !entry.Type().IsRegular() {
 			continue
 		}
-
-		page, err := readImage(filepath.Join(path, entry.Name()))
-		if err != nil {
+		pagePath := filepath.Join(path, entry.Name())
+		if _, err := imageConfig(pagePath); err != nil {
 			reader.errPages++
 			continue
 		}
-		reader.pages = append(reader.pages, page)
+		reader.pages = append(reader.pages, pagePath)
 	}
-
 	return reader, nil
 }
 
-// TotalPages returns the number of readable images in the directory.
-func (d *dirReader) TotalPages() int {
-	return len(d.pages)
-}
+func (d *dirReader) TotalPages() int              { return len(d.pages) }
+func (d *dirReader) ErrPages() int                { return d.errPages }
+func (d *dirReader) Metadata() *metadata.Metadata { return nil }
 
-// ErrPages returns the number of pages that could not be read.
-func (d *dirReader) ErrPages() int {
-	return d.errPages
-}
-
-// Metadata returns the metadata stored in the directory container.
-func (d *dirReader) Metadata() *metadata.Metadata {
-	return nil
-}
-
-// Page returns the decoded image at index.
+// Page decodes and returns one page on demand.
 func (d *dirReader) Page(index int) (image.Image, error) {
 	if index < 0 || index >= len(d.pages) {
 		return nil, container.ErrPageIndexOutOfRange
 	}
-
-	return d.pages[index], nil
+	return decodeImage(d.pages[index])
 }
 
-func readImage(path string) (image.Image, error) {
+// Close implements comicfile.ContainerReader. Directory readers own no open
+// resources between Page calls.
+func (*dirReader) Close() error { return nil }
+
+func imageConfig(path string) (image.Config, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return image.Config{}, err
+	}
+	defer file.Close()
+	config, _, err := image.DecodeConfig(file)
+	return config, err
+}
+
+func decodeImage(path string) (image.Image, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
-
 	page, _, err := image.Decode(file)
 	return page, err
 }

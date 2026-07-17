@@ -61,6 +61,7 @@ func read() error {
 	if err != nil {
 		return err
 	}
+	defer chapter.Close()
 	printMetadata(chapter.Metadata())
 	fmt.Printf("pages: %d\nunreadable pages: %d\n", chapter.TotalPages(), chapter.ErrPages())
 	for i := 0; i < chapter.TotalPages(); i++ {
